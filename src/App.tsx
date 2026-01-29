@@ -1,15 +1,12 @@
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage.tsx'
+import Header from './components/Header.tsx';
 //import PlayerPage from './pages/PlayerPage.tsx';
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-5">
-          <h1 className="text-3xl font-bold">Dota 2 Stats Analyzer</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-black">
+      <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <Routes>
