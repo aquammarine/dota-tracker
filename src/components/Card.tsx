@@ -1,11 +1,11 @@
 interface CardProps {
     children: React.ReactNode;
-    classname?: string;
+    className?: string;
 }
 
-export default function Card({ children, classname = "" }: CardProps) {
+export default function Card({ children, className = "" }: CardProps) {
     return (
-        <div className={classname}>
+        <div className={`bg-stone-800 rounded-xl shadow drop-shadow-stone-900 drop-shadow-md ${className}`}>
             {children}
         </div>
     )

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Player, WinLoss, RecentMatch, HeroStat } from '../types/opendota';
+import type { Player, WinLoss, RecentMatch, HeroStat, Rating } from '../types/opendota';
 
 const API = axios.create({
     baseURL: 'https://api.opendota.com/api',
@@ -26,12 +26,18 @@ export async function getHeroStats(accountId: string | number): Promise<HeroStat
     return res.data;
 }
 
+export async function getRating(accountId: string | number): Promise<Rating[]> {
+    const res = await API.get<Rating[]>(`/players/${accountId}/ratings`);
+    return res.data;
+}
+
 export async function getPlayerData(accountId: string | number) {
-    const [player, winLoss, recentMatches, heroStats] = await Promise.all([
+    const [player, winLoss, recentMatches, heroStats, ratings] = await Promise.all([
         getPlayer(accountId),
         getWinLoss(accountId),
         getRecentMatches(accountId),
         getHeroStats(accountId),
+        getRating(accountId),
     ]);
-    return { player, winLoss, recentMatches, heroStats };
+    return { player, winLoss, recentMatches, heroStats, ratings };
 }
