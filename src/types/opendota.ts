@@ -18,15 +18,6 @@ export interface Player {
   rank_tier?: number;
   leaderboard_rank?: number;
   competitive_rank?: number;
-  mmr_estimate?: { estimate: number };
-}
-
-export interface Rating{
-  account_id: number;
-  match_id: number;
-  solo_competitive_rank: number;
-  competitive_rank: number;
-  time: number;
 }
 
 export interface WinLoss {

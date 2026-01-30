@@ -26,18 +26,12 @@ export async function getHeroStats(accountId: string | number): Promise<HeroStat
     return res.data;
 }
 
-export async function getRating(accountId: string | number): Promise<Rating[]> {
-    const res = await API.get<Rating[]>(`/players/${accountId}/ratings`);
-    return res.data;
-}
-
 export async function getPlayerData(accountId: string | number) {
-    const [player, winLoss, recentMatches, heroStats, ratings] = await Promise.all([
+    const [player, winLoss, recentMatches, heroStats] = await Promise.all([
         getPlayer(accountId),
         getWinLoss(accountId),
         getRecentMatches(accountId),
         getHeroStats(accountId),
-        getRating(accountId),
     ]);
-    return { player, winLoss, recentMatches, heroStats, ratings };
+    return { player, winLoss, recentMatches, heroStats };
 }
