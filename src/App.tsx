@@ -8,7 +8,7 @@ function App() {
     <div className="min-h-screen bg-black">
       <Header />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/player/:accountId" element={<PlayerPage />} />

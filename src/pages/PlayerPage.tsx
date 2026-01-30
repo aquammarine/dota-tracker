@@ -1,3 +1,5 @@
+'use client';
+
 import { useParams } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -5,185 +7,188 @@ import {
     getWinLoss,
     getRecentMatches,
     getHeroStats,
+    getHeroesList,
 } from '../services/opendotaApi.ts';
 import Card from '../components/Card.tsx';
+import {
+    PieChart,
+    Pie,
+    Cell,
+    ResponsiveContainer,
+} from 'recharts';
 
-function Loading() {
-    return (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-400 font-medium">Fetching Player Data...</p>
-        </div>
-    );
-}
-
-function ErrorMessage({ message }: { message: string }) {
-    return (
-        <div className="max-w-md mx-auto mt-10 p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-center">
-            <p className="text-red-400 font-medium">{message}</p>
-        </div>
-    );
-}
+import LoadingSkeleton from '../components/LoadingSkeleton.tsx';
+import ErrorMessage from '../components/ErrorMessage.tsx';
+import PlayerHeader from '../components/PlayerHeader.tsx';
+import { AlarmClockPlus } from 'lucide-react';
 
 export default function PlayerPage() {
     const { accountId } = useParams<{ accountId: string }>();
 
     const results = useQueries({
         queries: [
-            { queryKey: ['player', accountId], queryFn: () => getPlayer(accountId!), enabled: !!accountId },
+            {
+                queryKey: ['player', accountId],
+                queryFn: () => getPlayer(accountId!),
+                enabled: !!accountId,
+            },
             { queryKey: ['winloss', accountId], queryFn: () => getWinLoss(accountId!) },
             { queryKey: ['recentMatches', accountId], queryFn: () => getRecentMatches(accountId!) },
-            { queryKey: ['heroes', accountId], queryFn: () => getHeroStats(accountId!) },
+            { queryKey: ['heroStats', accountId], queryFn: () => getHeroStats(accountId!) },
+            {
+                queryKey: ['heroesList'],
+                queryFn: getHeroesList,
+                staleTime: Infinity,
+            },
         ],
     });
 
-    const [playerQuery, wlQuery, matchesQuery, heroQuery] = results;
-    const isLoading = results.some((query) => query.isLoading);
-    const error = results.find((query) => query.error)?.error as Error | undefined;
+    const [playerQuery, wlQuery, matchesQuery, heroStatsQuery, heroesListQuery] = results;
 
-    if (isLoading) return <Loading />;
-    if (error) return <ErrorMessage message={`Error: ${error.message}`} />;
+    const isLoading = results.some((q) => q.isLoading);
+    const error = results.find((q) => q.error)?.error as Error | undefined;
 
-    const player = playerQuery.data;
-    const wl = wlQuery.data;
+    if (isLoading) return <LoadingSkeleton />;
+    if (error)
+        return <ErrorMessage errorType={"Error Loading Player"} description={"Try checking the Account ID or refresh the page."} message={`Failed to load data: ${error.message || 'Unknown error'}`} />;
 
-    const rankTier = player?.rank_tier;
-    const leaderBoardRank = player?.leaderboard_rank;
-
-    const rank = rankTier ? Math.floor(rankTier / 10) : null;
-    const stars = rankTier ? rankTier % 10 : null;
-
-    const ASSET_URL = "https://www.opendota.com/assets/images/dota2/rank_icons/";
-
+    const player = playerQuery.data!;
+    const wl = wlQuery.data!;
     const matches = matchesQuery.data ?? [];
+    const heroStats = heroStatsQuery.data ?? [];
+    const heroesList = heroesListQuery.data ?? [];
 
-    if (!wl) return null;
+    const heroMap = new Map<number, string>(
+        heroesList.map((h) => [h.id, h.localized_name])
+    );
 
     const totalGames = wl.win + wl.lose;
-    const winRate = totalGames > 0 ? ((wl.win / totalGames) * 100).toFixed(1) : '0';
+    const winRate = totalGames > 0 ? (wl.win / totalGames) * 100 : 0;
+
+    const rankTier = player.rank_tier;
+    const rank = rankTier ? Math.floor(rankTier / 10) : 0;
+    const stars = rankTier ? rankTier % 10 : 0;
+
+    // Top 8 most played heroes
+    const topHeroes = heroStats
+        .sort((a, b) => b.games - a.games)
+        .slice(0, 8)
+        .map((h) => ({
+            name: heroMap.get(h.hero_id) || `Hero #${h.hero_id}`,
+            games: h.games,
+            wins: h.win,
+            winRate: h.games > 0 ? (h.win / h.games) * 100 : 0,
+        }));
 
     return (
-        <div className="max-w-7xl mx-auto p-6 space-y-6">
-            <Card className="p-8 bg-neutral-900 border-neutral-800 shadow-xl overflow-hidden relative">
-                <div className="absolute top-0 left-0 p-8 opacity-5 select-none pointer-events-none">
-                    <h1 className="text-8xl font-black italic uppercase">DOTA</h1>
-                </div>
+        <div className="min-h-screen bg-[#020202] text-neutral-200 selection:bg-indigo-500/30 font-sans antialiased">
+            <div className="fixed inset-0 bg-neutral-950 pointer-events-none" />
+            <div className="relative w-full max-w-400 mx-auto p-4 md:p-8 space-y-8">
 
-                <div className="flex flex-col md:flex-row items-center justify-between relative z-10 gap-8">
-                    <div className="flex flex-col md:flex-row items-center gap-8">
-                        <img
-                            src={player?.profile.avatarfull}
-                            alt="Avatar"
-                            className="w-32 h-32 rounded-2xl shadow-2xl border-2 border-neutral-700"
-                        />
-                        <div className="text-center md:text-left">
-                            <h2 className="text-4xl font-black text-white tracking-tight leading-none mb-2">
-                                {player?.profile.personaname || 'Unknown Player'}
-                            </h2>
-                            <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs font-bold uppercase tracking-widest text-neutral-500">
-                                <span className="flex items-center gap-1">
-                                    ID: <span className="text-neutral-200 font-mono tracking-normal">{accountId}</span>
-                                </span>
-                            </div>
+                <PlayerHeader player={player} wl={wl} winRate={winRate} rankTier={rankTier} rank={rank} stars={stars} accountId={accountId} />
 
-                            <div className="mt-6 flex justify-center md:justify-start gap-8">
-                                <div>
-                                    <p className="text-[10px] uppercase font-bold text-neutral-500 mb-1">Win Rate</p>
-                                    <p className={`text-3xl font-mono ${Number(winRate) >= 50 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {winRate}%
-                                    </p>
-                                </div>
-                                <div className="w-px bg-neutral-800" />
-                                <div>
-                                    <p className="text-[10px] uppercase font-bold text-neutral-500 mb-1">Match Record</p>
-                                    <p className="text-2xl text-white italic">
-                                        <span className="text-green-500">{wl.win}W</span> — <span className="text-red-500">{wl.lose}L</span>
-                                    </p>
-                                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                    <Card className="xl:col-span-3 bg-neutral-900/20 border-neutral-800/40 overflow-hidden flex flex-col backdrop-blur-sm">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/1">
+                            <div>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-white leading-none">Recent Activity</h2>
+                                <p className="text-xs text-neutral-500 mt-1 font-medium">Performance tracking for last 20 encounters</p>
                             </div>
+                            <button className="text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-lg uppercase tracking-widest">
+                                Full History
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="flex items-center justify-center pr-4">
-                        {rankTier ? (
-                            <div className="relative w-24 h-24 transition-transform duration-500 hover:scale-110 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-                                <img
-                                    src={`${ASSET_URL}rank_icon_${rank}.png`}
-                                    className="absolute inset-0 w-full h-full object-contain z-10"
-                                    alt="Rank Medal"
-                                />
-                                {rank !== 8 && stars !== 0 && (
-                                    <img
-                                        src={`${ASSET_URL}rank_star_${stars}.png`}
-                                        className="absolute inset-0 w-full h-full object-contain z-20"
-                                        alt="Rank Stars"
-                                    />
-                                )}
-                                {leaderBoardRank && (
-                                    <span className="absolute bottom-2 left-0 right-0 text-center text-sm font-black text-white z-30 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
-                                        {leaderBoardRank}
-                                    </span>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-20 h-20 bg-neutral-800/40 rounded-full flex items-center justify-center border border-neutral-700/50 shadow-inner">
-                                    <span className="text-[10px] text-neutral-500 font-black uppercase tracking-tighter italic">N/A</span>
-                                </div>
-                                <span className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest">Unranked</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </Card>
-
-            <Card className="border-neutral-800 bg-neutral-900 shadow-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-neutral-800 bg-neutral-950/50 flex justify-between items-center">
-                    <h3 className="font-bold text-neutral-300 uppercase tracking-widest text-sm italic">Recent Match Performance</h3>
-                    <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-tighter bg-neutral-800 px-2 py-1 rounded">Latest 20 Games</span>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-neutral-950/50 text-neutral-500 text-[10px] uppercase font-black tracking-widest">
-                                <th className="p-4 text-left">Match ID</th>
-                                <th className="px-4 py-4 text-left">Hero</th>
-                                <th className="px-4 py-4 text-left">K / D / A</th>
-                                <th className="px-4 py-4 text-left">Duration</th>
-                                <th className="px-4 py-4 text-right pr-6">Result</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-800/50">
-                            {matches.slice(0, 20).map((match) => {
-                                const isWin = (match.player_slot < 128) === match.radiant_win;
-                                return (
-                                    <tr key={match.match_id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="p-4 font-mono text-sm text-neutral-500 group-hover:text-blue-400">{match.match_id}</td>
-                                        <td className="px-4 py-4 font-bold text-neutral-300">#{match.hero_id}</td>
-                                        <td className="px-4 py-4 font-mono text-sm">
-                                            <span className="text-neutral-100">{match.kills}</span>
-                                            <span className="mx-1 text-neutral-700">/</span>
-                                            <span className="text-red-500">{match.deaths}</span>
-                                            <span className="mx-1 text-neutral-700">/</span>
-                                            <span className="text-neutral-100">{match.assists}</span>
-                                        </td>
-                                        <td className="px-4 py-4 text-neutral-400 text-sm font-mono">
-                                            {Math.floor(match.duration / 60)}:{(match.duration % 60).toString().padStart(2, '0')}
-                                        </td>
-                                        <td className="px-4 py-4 text-right pr-6">
-                                            <span className={`px-3 py-1 rounded-md text-[10px] font-black uppercase italic ${isWin ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                                                : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                                }`}>
-                                                {isWin ? 'Victory' : 'Defeat'}
-                                            </span>
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 border-b border-white/5">
+                                        <th className="px-8 py-5 font-black">Hero</th>
+                                        <th className="px-8 py-5 font-black text-center">Outcome</th>
+                                        <th className="px-8 py-5 font-black">Performance (K/D/A)</th>
+                                        <th className="px-8 py-5 font-black">Duration</th>
+                                        <th className="px-8 py-5 font-black text-right">Match Details</th>
                                     </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                </thead>
+                                <tbody className="divide-y divide-white/2">
+                                    {matches.slice(0, 15).map((match) => {
+                                        const isWin = (match.player_slot < 128) === match.radiant_win;
+                                        return (
+                                            <tr key={match.match_id} className="hover:bg-white/3 transition-all group cursor-default">
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-6 bg-neutral-800 rounded overflow-hidden border border-white/5">
+                                                            {/* HERO IMAGE */}
+                                                        </div>
+                                                        <span className="font-black text-neutral-200 group-hover:text-white transition-colors uppercase text-sm tracking-tight">
+                                                            {heroMap.get(match.hero_id)}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex justify-center">
+                                                        <span className={`text-[10px] font-black uppercase w-16 text-center py-1 rounded-sm ${isWin ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                            }`}>
+                                                            {isWin ? 'Victory' : 'Defeat'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5 font-mono text-sm tracking-tighter">
+                                                    <span className="text-emerald-400 font-bold">{match.kills}</span>
+                                                    <span className="text-neutral-600 mx-1">/</span>
+                                                    <span className="text-red-400 font-bold">{match.deaths}</span>
+                                                    <span className="text-neutral-600 mx-1">/</span>
+                                                    <span className="text-sky-400 font-bold">{match.assists}</span>
+                                                </td>
+                                                <td className="px-8 py-5 text-xs text-neutral-400 font-mono">
+                                                    {Math.floor(match.duration / 60)}:{match.duration % 60}
+                                                </td>
+                                                <td className="px-8 py-5 text-right">
+                                                    <span className="text-xs text-neutral-600 font-mono group-hover:text-indigo-400 transition-colors">#{match.match_id}</span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+
+                    <div className="xl:col-span-1 space-y-8 flex flex-col">
+                        <Card className="bg-neutral-900/20 border-neutral-800/40 p-8 grow backdrop-blur-sm">
+                            <h2 className="text-xl font-black uppercase tracking-tighter text-white mb-8 border-b border-white/5 pb-4">Signature Heroes</h2>
+                            <div className="space-y-8">
+                                {topHeroes.map((hero) => (
+                                    <div key={hero.name} className="group cursor-default">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <span className="text-sm font-black text-neutral-300 group-hover:text-white transition-colors uppercase tracking-tight">{hero.name}</span>
+                                            <span className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">{hero.games} Matches</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-neutral-800/50 rounded-full overflow-hidden flex border border-white/5">
+                                            <div
+                                                className="h-full bg-linear-to-r from-indigo-600 to-emerald-400 transition-all duration-1000 group-hover:saturate-150"
+                                                style={{ width: `${hero.winRate}%` }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between mt-2">
+                                            <span className="text-[10px] font-black text-emerald-400">{hero.winRate.toFixed(1)}% WR</span>
+                                            <span className="text-[10px] font-black text-neutral-600 uppercase tracking-tighter">{hero.wins} Wins</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+
+                        <Card className="bg-linear-to-br from-indigo-900/20 to-neutral-900/40 border-neutral-800/40 p-10 text-center relative overflow-hidden group">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-indigo-500 to-emerald-500 opacity-50" />
+                            <p className="text-[10px] uppercase tracking-[0.4em] font-black text-indigo-400/80 mb-4">Tactical Insight</p>
+                            <p className="text-white text-xl italic leading-relaxed relative z-10 group-hover:scale-105 transition-transform duration-500">
+                                "Luck is what happens when preparation meets opportunity."
+                            </p>
+                            <div className="absolute -bottom-4 -right-4 text-6xl text-white/2 font-black italic">"</div>
+                        </Card>
+                    </div>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 }

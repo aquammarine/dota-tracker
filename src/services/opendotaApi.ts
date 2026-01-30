@@ -1,37 +1,51 @@
 import axios from 'axios';
-import type { Player, WinLoss, RecentMatch, HeroStat, Rating } from '../types/opendota';
+import type {
+  Player,
+  WinLoss,
+  RecentMatch,
+  HeroStat,
+  HeroListItem,
+} from '../types/opendota';
 
+// Single Axios instance (best practice)
 const API = axios.create({
-    baseURL: 'https://api.opendota.com/api',
-    timeout: 15000,
+  baseURL: 'https://api.opendota.com/api',
+  timeout: 15000,
+  headers: {
+    'Accept': 'application/json',
+  },
 });
 
-export async function getPlayer(accountId: string | number): Promise<Player> {
-    const res = await API.get<Player>(`/players/${accountId}`);
-    return res.data;
-}
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-export async function getWinLoss(accountId: string | number): Promise<WinLoss> {
-    const res = await API.get<WinLoss>(`/players/${accountId}/wl`);
-    return res.data;
-}
+export const getPlayer = async (accountId: string): Promise<Player> => {
+  const { data } = await API.get<Player>(`/players/${accountId}`);
+  return data;
+};
 
-export async function getRecentMatches(accountId: string | number): Promise<RecentMatch[]> {
-    const res = await API.get<RecentMatch[]>(`/players/${accountId}/recentMatches`);
-    return res.data;
-}
+export const getWinLoss = async (accountId: string): Promise<WinLoss> => {
+  const { data } = await API.get<WinLoss>(`/players/${accountId}/wl`);
+  return data;
+};
 
-export async function getHeroStats(accountId: string | number): Promise<HeroStat[]> {
-    const res = await API.get<HeroStat[]>(`/players/${accountId}/heroes`);
-    return res.data;
-}
+export const getRecentMatches = async (accountId: string): Promise<RecentMatch[]> => {
+  const { data } = await API.get<RecentMatch[]>(`/players/${accountId}/recentMatches`);
+  return data;
+};
 
-export async function getPlayerData(accountId: string | number) {
-    const [player, winLoss, recentMatches, heroStats] = await Promise.all([
-        getPlayer(accountId),
-        getWinLoss(accountId),
-        getRecentMatches(accountId),
-        getHeroStats(accountId),
-    ]);
-    return { player, winLoss, recentMatches, heroStats };
-}
+export const getHeroStats = async (accountId: string): Promise<HeroStat[]> => {
+  const { data } = await API.get<HeroStat[]>(`/players/${accountId}/heroes`);
+  return data;
+};
+
+export const getHeroesList = async (): Promise<HeroListItem[]> => {
+  const { data } = await API.get<HeroListItem[]>('/heroes');
+  return data;
+};
+
+export default API;
