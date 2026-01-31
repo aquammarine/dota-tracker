@@ -52,11 +52,16 @@ export default function PlayerPage() {
     const heroStats = heroStatsQuery.data ?? [];
     const heroesList = heroesListQuery.data ?? [];
 
-    const heroMap = new Map<number, string>(
-        heroesList.map((h) => [h.id, h.localized_name])
+    const heroInfoMap = new Map<number, { localizedName: string; imgUrl: string }>(
+        heroesList.map((h) => {
+            const shortName = h.name.replace('npc_dota_hero_', '');
+            const imgUrl = `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${shortName}.png`;
+            return [h.id, { localizedName: h.localized_name, imgUrl: imgUrl }];
+        })
     );
 
     const enrichedMatches = (matches ?? []).slice(0, 20).map((match) => {
+        const heroInfo = heroInfoMap.get(match.hero_id);
         const isWin = (match.player_slot < 128) === match.radiant_win;
         const minutes = Math.floor(match.duration / 60);
         const seconds = String(match.duration % 60).padStart(2, '0');
@@ -64,7 +69,8 @@ export default function PlayerPage() {
 
         return {
             ...match,
-            heroName: heroMap.get(match.hero_id) || `Hero #${match.hero_id}`,
+            heroName: heroInfo?.localizedName || `Hero #${match.hero_id}`,
+            heroImgUrl: heroInfo?.imgUrl || 'https://cdn.dota2.com/apps/dota2/images/heroes/unknown.png',
             isWin,
             formattedDuration,
         };
@@ -77,16 +83,21 @@ export default function PlayerPage() {
     const rank = rankTier ? Math.floor(rankTier / 10) : 0;
     const stars = rankTier ? rankTier % 10 : 0;
 
-    // Top 8 most played heroes
     const topHeroes = heroStats
         .sort((a, b) => b.games - a.games)
         .slice(0, 8)
-        .map((h) => ({
-            name: heroMap.get(h.hero_id) || `Hero #${h.hero_id}`,
-            games: h.games,
-            wins: h.win,
-            winRate: h.games > 0 ? (h.win / h.games) * 100 : 0,
-        }));
+        .map((h) => {
+            const heroInfo = heroInfoMap.get(h.hero_id);
+            return {
+                name: heroInfo?.localizedName || `Hero #${h.hero_id}`,
+                imgUrl: heroInfo?.imgUrl,
+                games: h.games,
+                wins: h.win,
+                winRate: h.games > 0 ? (h.win / h.games) * 100 : 0,
+            }
+        });
+
+    console.log(topHeroes);
 
     return (
         <div className="min-h-screen bg-[#020202] text-neutral-200 selection:bg-indigo-500/30 font-sans antialiased">
@@ -101,6 +112,9 @@ export default function PlayerPage() {
                             <div className="space-y-8">
                                 {topHeroes.map((hero) => (
                                     <div key={hero.name} className="group cursor-default">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <img src={hero.imgUrl} alt={hero.name} className="w-12 h-7 rounded border border-white/10" />
+                                        </div>
                                         <div className="flex justify-between items-end mb-2">
                                             <span className="text-sm font-black text-neutral-300 group-hover:text-white transition-colors uppercase tracking-tight">{hero.name}</span>
                                             <span className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">{hero.games} Matches</span>

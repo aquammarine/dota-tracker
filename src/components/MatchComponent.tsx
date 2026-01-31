@@ -1,28 +1,28 @@
 import type { RecentMatch } from "../types/opendota"
 
 interface EnrichedMatch extends RecentMatch {
-  heroName: string;
-  isWin: boolean;
-  formattedDuration: string;
+    heroName: string;
+    heroImgUrl: string;
+    isWin: boolean;
+    formattedDuration: string;
 }
 
-interface MatchComponentProps{
+interface MatchComponentProps {
     match: EnrichedMatch;
 }
 
 export default function MatchComponent({ match }: MatchComponentProps) {
-    const { heroName, isWin, formattedDuration, kills, deaths, assists, match_id } = match;
+    const { heroName, heroImgUrl, isWin, formattedDuration, kills, deaths, assists, match_id } = match;
 
     return (
         <tr key={match_id} className="hover:bg-white/3 transition-all group cursor-default">
             <td className="px-8 py-5">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-6 bg-neutral-800 rounded overflow-hidden border border-white/5">
-                        {/* HERO IMAGE */}
+                    <div className="w-16 h-9 bg-neutral-800 rounded overflow-hidden border border-white/5 shrink-0">
+                        <img src={heroImgUrl} alt={heroName} className="w-full h-full object-cover" onError={(e) => {
+                            (e.currentTarget.src = 'https://cdn.dota2.com/apps/dota2/images/heroes/unknown_sb.png');
+                        }}/>
                     </div>
-                    <span className="font-black text-neutral-200 group-hover:text-white transition-colors uppercase text-sm tracking-tight">
-                        {heroName}
-                    </span>
                 </div>
             </td>
             <td className="px-8 py-5">

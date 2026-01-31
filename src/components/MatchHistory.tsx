@@ -4,6 +4,7 @@ import Card from "./Card";
 
 interface EnrichedMatch extends RecentMatch {
     heroName: string,
+    heroImgUrl: string,
     isWin: boolean,
     formattedDuration: string,
 }
@@ -30,7 +31,7 @@ export default function MatchHistory({ matches }: MatchHistoryProps) {
                         <tr className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 border-b border-white/5">
                             <th className="px-8 py-5 font-black">Hero</th>
                             <th className="px-8 py-5 font-black text-center">Outcome</th>
-                            <th className="px-8 py-5 font-black">Performance (K/D/A)</th>
+                            <th className="px-8 py-5 font-black">K/D/A</th>
                             <th className="px-8 py-5 font-black">Duration</th>
                             <th className="px-8 py-5 font-black text-right">Match Details</th>
                         </tr>
