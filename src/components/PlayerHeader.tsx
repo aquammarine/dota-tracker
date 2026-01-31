@@ -1,6 +1,6 @@
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Card from './Card.tsx';
-import type {Player, WinLoss} from '../types/opendota.ts'
+import type { Player, WinLoss } from '../types/opendota.ts'
 
 const ASSET_URL = 'https://www.opendota.com/assets/images/dota2/rank_icons/';
 const FALLBACK_AVATAR = 'https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg';
@@ -15,7 +15,7 @@ type PlayerHeaderProps = {
     accountId: string | undefined;
 };
 
-export default function PlayerHeader({player, wl, winRate, rankTier, rank, stars, accountId}: PlayerHeaderProps) {
+export default function PlayerHeader({ player, wl, winRate, rankTier, rank, stars, accountId }: PlayerHeaderProps) {
 
     return (
         <Card className="relative overflow-hidden bg-neutral-900/20 border-neutral-800/40 backdrop-blur-xl w-full border-t-neutral-700/30">

@@ -48,4 +48,9 @@ export const getHeroesList = async (): Promise<HeroListItem[]> => {
   return data;
 };
 
+export async function getMatch(matchId: string | number): Promise<any> {
+  const { data } = await API.get(`/matches/${matchId}`);
+  return data;
+}
+
 export default API;
